@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import nttdata.bootcamp.microservicios.cliente.natural.documents.NaturalLegalClient;
 import nttdata.bootcamp.microservicios.cliente.natural.documents.TypeNaturalClient;
 import nttdata.bootcamp.microservicios.cliente.natural.services.NaturalLegalClientService;
+
 import nttdata.bootcamp.microservicios.cliente.natural.services.TypeNaturalClientService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -87,33 +90,44 @@ public class NaturalLegalClientController {
 	public ResponseEntity<Mono<?>> newNaturalPerson(@PathVariable String id,
 			@Valid @RequestBody NaturalLegalClient naturals) {
 
-		// TypeNaturalClient typex = new TypeNaturalClient();
+		TypeNaturalClient typex = new TypeNaturalClient();
 
 		List<TypeNaturalClient> types = new ArrayList<>();
 
-		Mono<TypeNaturalClient> monotype = typeservice.findById(id);
+		// Mono<TypeNaturalClient> monotype = typeservice.findById(id); // todavia no
+		// puedo obtener .get(i) los elememntos
+		// del flujo hago artificios
 
-		monotype.subscribe(tp -> types.add(tp));
-		// typex.setId(id);
+		if (id.equals("626208bafd7af9601a085afd")) {
+			typex.setId(id);
+			typex.setTypename("VIP");
+			typex.setCreateAt(new Date());
+		} else {
+			typex.setId(id);
+			typex.setTypename("average");
+			typex.setCreateAt(new Date());
+		}
 
 		/*
-		 * Flux<TypeNaturalClient> fx = Flux.fromIterable(types);
+		 * monotype.doOnNext(tz -> { if (id.equals("626208bafd7af9601a085afd")) {
+		 * typex.setId(id); typex.setTypename("VIP"); typex.setCreateAt(new Date()); }
+		 * else { typex.setId(id); typex.setTypename("average"); typex.setCreateAt(new
+		 * Date()); } }).onErrorReturn(typex).onErrorResume(e -> Mono.just(typex))
+		 * .onErrorMap(f -> new InterruptedException(f.getMessage())) .subscribe(tp ->
+		 * LOGGER.info("seteo de Entity Tipo CLiente para la creacion" + tp));
 		 * 
-		 * Flux.fromIterable(types).filter(tp -> tp.getId().equals(id)).doOnNext(tipo ->
-		 * {
 		 * 
-		 * // naturals.setTypeNaturalclient(fx);
-		 * 
-		 * }).subscribe(y -> LOGGER.info(y.toString()));
 		 */
-
 		Mono.just(naturals).doOnNext(t -> {
 			// t.setTypeNaturalclient(fx);
+			types.add(typex);
 			t.setListtypeNatural(types);
-			// t.setType(typex);
-			t.setCreateAt(new Date());
+			t.setType(typex);
 
-		}).subscribe(x -> LOGGER.info(x.toString()));
+			// t.setCreateAt(new Date());
+
+		}).onErrorReturn(naturals).onErrorResume(e -> Mono.just(naturals))
+				.onErrorMap(f -> new InterruptedException(f.getMessage())).subscribe(x -> LOGGER.info(x.toString()));
 
 		Mono<NaturalLegalClient> newNaturalPerson = service.saves(naturals);
 
@@ -136,15 +150,37 @@ public class NaturalLegalClientController {
 
 	@PutMapping("/update-type-client/{id}")
 	public ResponseEntity<Mono<?>> updateTypeNaturalPerson(@Valid @RequestBody TypeNaturalClient type,
-			BindingResult result, @PathVariable String id) {
+			@PathVariable String id) {
+
+		Mono<TypeNaturalClient> newTypeNaturalPerson = typeservice.findById(id);
+		List<TypeNaturalClient> types = new ArrayList<>();
+
+		String lasttypename = type.getTypename();
 
 		Mono.just(type).doOnNext(t -> {
+			type.setId(id);
 
 			t.setCreateAt(new Date());
 
-		}).subscribe(x -> LOGGER.info(x.toString()));
+		}).onErrorReturn(type).onErrorResume(e -> Mono.just(type))
+				.onErrorMap(f -> new InterruptedException(f.getMessage()))
+				.subscribe(x -> LOGGER.info("el valor cambiado es: " + x.toString()));
 
-		Mono<TypeNaturalClient> newTypeNaturalPerson = typeservice.saves(type);
+		newTypeNaturalPerson = typeservice.saves(type);
+
+		// NaturalLegalClient naturalx = new NaturalLegalClient();
+		List<NaturalLegalClient> naturals = new ArrayList<>();
+		Flux<NaturalLegalClient> fluxnatural = Flux.fromIterable(naturals);
+		Flux<NaturalLegalClient> fx2 = fluxnatural;
+
+		fx2.filter(f -> f.getType().getTypename().equals(lasttypename)).flatMap(n -> {
+			types.add(type);
+			n.setListtypeNatural(types);
+			n.setType(type);
+			service.saves(n);
+			return Mono.just(n);
+		}).collectList().onErrorReturn(naturals).onErrorResume(e -> Mono.just(naturals))
+				.onErrorMap(f -> new InterruptedException(f.getMessage())).subscribe(x -> LOGGER.info(x.toString()));
 
 		if (newTypeNaturalPerson != null) {
 
@@ -154,24 +190,100 @@ public class NaturalLegalClientController {
 
 		return new ResponseEntity<>(Mono.just(new NaturalLegalClient()), HttpStatus.I_AM_A_TEAPOT);
 	}
-	@PutMapping("/update-type-client/{typeNaturalid}/update-natural-client/{naturalClientId}")
-	public ResponseEntity<Mono<?>> updateeNaturalPerson(@Valid @RequestBody TypeNaturalClient type,
-			BindingResult result, @PathVariable String id) {
 
-		Mono.just(type).doOnNext(t -> {
+	@PutMapping("{naturalClientId}/update-natural-client/{typeNaturalId}")
+	public ResponseEntity<Mono<?>> updateeNaturalPerson(@Valid @RequestBody NaturalLegalClient naturals,
+			@PathVariable String naturalClientId, @PathVariable String typeNaturalId) {
+
+		// definimos tipo de cliente
+
+		TypeNaturalClient typex = new TypeNaturalClient();
+
+		List<TypeNaturalClient> types = new ArrayList<>();
+
+		if (typeNaturalId.equals("626208bafd7af9601a085afd")) {
+			typex.setId(typeNaturalId);
+			typex.setTypename("VIP");
+			typex.setCreateAt(new Date());
+		} else {
+			typex.setId(typeNaturalId);
+			typex.setTypename("average");
+			typex.setCreateAt(new Date());
+		}
+
+		/*
+		 * Mono<TypeNaturalClient> monotype = typeservice.findById(typeNaturalId);
+		 * monotype.doOnNext(tz -> { if
+		 * (typeNaturalId.equals("626208bafd7af9601a085afd")) {
+		 * typex.setId(typeNaturalId); typex.setTypename("VIP"); typex.setCreateAt(new
+		 * Date()); } else { typex.setId(typeNaturalId); typex.setTypename("average");
+		 * typex.setCreateAt(new Date()); } }).onErrorReturn(typex).onErrorResume(e ->
+		 * Mono.just(typex)) .onErrorMap(f -> new InterruptedException(f.getMessage()))
+		 * .subscribe(tp ->
+		 * LOGGER.info("seteo de Entity Tipo CLiente para la acutalizacion" + tp));
+		 */
+
+		// definos cliente natural
+		Mono<NaturalLegalClient> newNaturalPerson = service.findById(naturalClientId);
+
+		Mono.just(naturals).doOnNext(t -> {
+			naturals.setId(naturalClientId);
+			types.add(typex);
+			t.setId(naturalClientId);
+
+			t.setListtypeNatural(types);
+
+			t.setType(typex);
 
 			t.setCreateAt(new Date());
 
-		}).subscribe(x -> LOGGER.info(x.toString()));
+		}).onErrorReturn(naturals).onErrorResume(e -> Mono.just(naturals))
+				.onErrorMap(f -> new InterruptedException(f.getMessage())).subscribe(x -> LOGGER.info(x.toString()));
 
-		Mono<TypeNaturalClient> newTypeNaturalPerson = typeservice.saves(type);
+		newNaturalPerson = service.saves(naturals);
 
-		if (newTypeNaturalPerson != null) {
+		if (newNaturalPerson != null) {
 
-			return new ResponseEntity<>(newTypeNaturalPerson, HttpStatus.CREATED);
-
+			return new ResponseEntity<>(newNaturalPerson, HttpStatus.CREATED);
 		}
 
 		return new ResponseEntity<>(Mono.just(new NaturalLegalClient()), HttpStatus.I_AM_A_TEAPOT);
 	}
+
+	@DeleteMapping("/eliminar-cliente-natural/{id}")
+	public ResponseEntity<Mono<Void>> deleteNaturalPerson(@PathVariable String id) {
+		NaturalLegalClient natural = new NaturalLegalClient();
+		natural.setId(id);
+		Mono<NaturalLegalClient> newNaturalPerson = service.findById(id);
+		newNaturalPerson.subscribe();
+		Mono<Void> test = service.delete(natural);
+		test.subscribe();
+		return ResponseEntity.noContent().build();
+	}
+
+	@DeleteMapping("/eliminar-tipocliente-natural/{id}")
+	public ResponseEntity<Mono<Void>> deleteTypeNaturalPerson(@PathVariable String id) {
+		TypeNaturalClient typenatural = new TypeNaturalClient();
+		typenatural.setId(id);
+		Mono<TypeNaturalClient> newTypeNaturalPerson = typeservice.findById(id);
+		newTypeNaturalPerson.subscribe();
+		Mono<Void> test = typeservice.delete(typenatural);
+
+		test.subscribe();
+
+		return ResponseEntity.noContent().build();
+	}
+
+	protected ResponseEntity<Mono<?>> validar(BindingResult result) {
+		Map<String, Object> errores = new HashMap<>();
+		result.getFieldErrors().forEach(err -> {
+			errores.put(err.getField(), "El campo " + err.getField() + " " + err.getDefaultMessage());
+		});
+
+		ResponseEntity.badRequest().body(errores);
+
+		return new ResponseEntity<>(Mono.just(errores), HttpStatus.I_AM_A_TEAPOT);
+		// return ResponseEntity.badRequest().body(errores);
+	}
+
 }

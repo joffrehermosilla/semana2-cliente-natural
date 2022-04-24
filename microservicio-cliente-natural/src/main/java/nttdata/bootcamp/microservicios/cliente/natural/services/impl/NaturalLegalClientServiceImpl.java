@@ -60,4 +60,6 @@ public class NaturalLegalClientServiceImpl implements NaturalLegalClientService 
 		return null;
 	}
 
+
+
 }

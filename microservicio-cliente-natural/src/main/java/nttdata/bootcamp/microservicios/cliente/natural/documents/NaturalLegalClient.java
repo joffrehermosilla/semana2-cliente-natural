@@ -2,9 +2,7 @@ package nttdata.bootcamp.microservicios.cliente.natural.documents;
 
 import java.util.Date;
 import java.util.List;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +13,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Data
 @AllArgsConstructor
@@ -40,7 +36,7 @@ public class NaturalLegalClient {
 
 	private List<TypeNaturalClient> listtypeNatural;
 
-	// private TypeNaturalClient type;
+	private TypeNaturalClient type;
 
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private Date createAt;
