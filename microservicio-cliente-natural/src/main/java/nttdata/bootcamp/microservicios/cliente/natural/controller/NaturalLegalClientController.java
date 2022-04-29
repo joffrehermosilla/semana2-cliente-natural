@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -76,15 +75,13 @@ public class NaturalLegalClientController {
 		return service.findById(id);
 	}
 
-	/*
-	 * @PostMapping("/create-natural-client") public Mono<NaturalLegalClient>
-	 * createNaturalLegalClient(
-	 * 
-	 * @Valid @RequestBody NaturalLegalClient naturalLegalCLient) {
-	 * LOGGER.info("NATURAL LEGAL CLIENT create: " +
-	 * service.saves(naturalLegalCLient)); return service.saves(naturalLegalCLient);
-	 * }
-	 */
+	@PostMapping("/create-natural-client")
+	public Mono<NaturalLegalClient> createNaturalLegalClient(
+
+			@Valid @RequestBody NaturalLegalClient naturalLegalCLient) {
+		LOGGER.info("NATURAL LEGAL CLIENT create: " + service.saves(naturalLegalCLient));
+		return service.saves(naturalLegalCLient);
+	}
 
 	@PostMapping("/create-natural-response/{id}")
 	public ResponseEntity<Mono<?>> newNaturalPerson(@PathVariable String id,
@@ -192,7 +189,7 @@ public class NaturalLegalClientController {
 	}
 
 	@PutMapping("{naturalClientId}/update-natural-client/{typeNaturalId}")
-	public ResponseEntity<Mono<?>> updateeNaturalPerson(@Valid @RequestBody NaturalLegalClient naturals,
+	public ResponseEntity<Mono<?>> updateNaturalPerson(@Valid @RequestBody NaturalLegalClient naturals,
 			@PathVariable String naturalClientId, @PathVariable String typeNaturalId) {
 
 		// definimos tipo de cliente
@@ -227,7 +224,7 @@ public class NaturalLegalClientController {
 		Mono<NaturalLegalClient> newNaturalPerson = service.findById(naturalClientId);
 
 		Mono.just(naturals).doOnNext(t -> {
-			naturals.setId(naturalClientId);
+			// naturals.setId(naturalClientId);
 			types.add(typex);
 			t.setId(naturalClientId);
 
